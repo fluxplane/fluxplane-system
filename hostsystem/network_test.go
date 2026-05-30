@@ -21,7 +21,7 @@ func TestFacadeDoHTTP(t *testing.T) {
 	}))
 	defer server.Close()
 
-	host, err := hostsystem.New(hostsystem.Config{Root: t.TempDir()})
+	host, err := hostsystem.New(hostsystem.Config{Root: t.TempDir(), Network: hostsystem.NetworkConfig{AllowPrivate: true}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +51,7 @@ func TestNetworkDialContextLocalListener(t *testing.T) {
 		defer func() { _ = conn.Close() }()
 		_, _ = io.WriteString(conn, "ok")
 	}()
-	network := hostsystem.NewNetwork()
+	network := hostsystem.NewNetwork(hostsystem.NetworkConfig{AllowPrivate: true})
 	conn, err := network.DialContext(context.Background(), "tcp", listener.Addr().String())
 	if err != nil {
 		t.Fatal(err)
@@ -67,8 +67,16 @@ func TestNetworkDialContextLocalListener(t *testing.T) {
 	<-done
 }
 
+func TestNetworkBlocksPrivateTargets(t *testing.T) {
+	network := hostsystem.NewNetwork(hostsystem.NetworkConfig{})
+	_, err := network.DialContext(context.Background(), "tcp", "127.0.0.1:80")
+	if err == nil {
+		t.Fatal("expected private target block")
+	}
+}
+
 func TestNetworkResolverInterface(t *testing.T) {
-	network := hostsystem.NewNetwork()
+	network := hostsystem.NewNetwork(hostsystem.NetworkConfig{})
 	if network.Resolver() == nil {
 		t.Fatal("resolver is nil")
 	}

@@ -64,7 +64,7 @@ func (b Builder) WithNetwork(network system.Network) Builder {
 }
 
 func (b Builder) WithHostNetwork() Builder {
-	return b.WithNetwork(hostsystem.NewNetwork())
+	return b.WithNetwork(hostsystem.NewNetwork(hostsystem.NetworkConfig{AllowPrivate: true}))
 }
 
 func (b Builder) WithoutNetwork() Builder {

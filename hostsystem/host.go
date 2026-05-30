@@ -19,7 +19,8 @@ type Config struct {
 	// still normal host execution and not a sandbox.
 	Root string
 
-	Clock system.Clock
+	Clock   system.Clock
+	Network NetworkConfig
 }
 
 // Host is the local host-backed System implementation.
@@ -53,7 +54,7 @@ func New(cfg Config) (*Host, error) {
 	env := Environment{}
 	return &Host{
 		files:   files,
-		network: NewNetwork(),
+		network: NewNetwork(cfg.Network),
 		process: NewProcess(abs, env, clock),
 		env:     env,
 		clock:   clock,
