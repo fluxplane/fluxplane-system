@@ -92,6 +92,9 @@ func (f FailingFileSystem) ReadFile(string) ([]byte, error)       { return nil, 
 func (f FailingFileSystem) WriteFile(context.Context, string, []byte, system.WriteFileOptions) error {
 	return f.err()
 }
+func (f FailingFileSystem) WriteTempFile(context.Context, string, string, []byte, system.WriteTempFileOptions) (string, error) {
+	return "", f.err()
+}
 func (f FailingFileSystem) MkdirAll(context.Context, string, system.MkdirOptions) error {
 	return f.err()
 }

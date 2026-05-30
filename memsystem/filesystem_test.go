@@ -60,6 +60,31 @@ func TestFileSystemDirectoryAndOverwriteBehavior(t *testing.T) {
 	}
 }
 
+func TestFileSystemWriteTempFile(t *testing.T) {
+	fsys := NewFileSystem()
+	first, err := fsys.WriteTempFile(context.Background(), "artifacts", "shot-*.png", []byte("one"), system.WriteTempFileOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := fsys.WriteTempFile(context.Background(), "artifacts", "shot-*.png", []byte("two"), system.WriteTempFileOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first == second {
+		t.Fatalf("temp names were not unique: %q", first)
+	}
+	if first != "artifacts/shot-000001.png" || second != "artifacts/shot-000002.png" {
+		t.Fatalf("temp names = %q, %q", first, second)
+	}
+	data, err := fs.ReadFile(fsys, second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "two" {
+		t.Fatalf("temp data = %q", data)
+	}
+}
+
 func TestClockSleepAdvances(t *testing.T) {
 	clock := NewClock(testTime())
 	start := clock.Now()

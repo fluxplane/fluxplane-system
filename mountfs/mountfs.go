@@ -192,6 +192,28 @@ func (f *FileSystem) WriteFile(ctx context.Context, name string, data []byte, op
 	return f.base.WriteFile(ctx, resolved.Path, data, opts)
 }
 
+func (f *FileSystem) WriteTempFile(ctx context.Context, dir, pattern string, data []byte, opts system.WriteTempFileOptions) (string, error) {
+	if isVirtualRoot(dir) {
+		return "", fmt.Errorf("cannot write temp file at mount filesystem root")
+	}
+	resolved, err := f.Resolve(dir)
+	if err != nil {
+		return "", err
+	}
+	if !canWrite(resolved.Root.Access) {
+		return "", fmt.Errorf("root %q is read-only", rootLabel(resolved.Root.Name))
+	}
+	created, err := f.base.WriteTempFile(ctx, resolved.Path, pattern, data, opts)
+	if err != nil {
+		return "", err
+	}
+	rel, err := relativeUnder(resolved.Root.Path, created)
+	if err != nil {
+		return "", err
+	}
+	return cleanVisibleName(resolved.Root.Name, rel), nil
+}
+
 func (f *FileSystem) MkdirAll(ctx context.Context, name string, opts system.MkdirOptions) error {
 	if isVirtualRoot(name) {
 		return nil
@@ -397,6 +419,22 @@ func join(rootPath, rel string) string {
 		return rel
 	}
 	return path.Join(rootPath, rel)
+}
+
+func relativeUnder(rootPath, name string) (string, error) {
+	rootPath = path.Clean(rootPath)
+	name = path.Clean(name)
+	if rootPath == "." {
+		return name, nil
+	}
+	if name == rootPath {
+		return "", fmt.Errorf("path is a directory")
+	}
+	prefix := strings.TrimSuffix(rootPath, "/") + "/"
+	if !strings.HasPrefix(name, prefix) {
+		return "", fmt.Errorf("path escapes mounted root")
+	}
+	return strings.TrimPrefix(name, prefix), nil
 }
 
 func rootLabel(name string) string {

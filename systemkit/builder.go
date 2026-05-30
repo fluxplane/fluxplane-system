@@ -232,6 +232,9 @@ func (unsupportedFileSystem) ReadFile(string) ([]byte, error) {
 func (unsupportedFileSystem) WriteFile(context.Context, string, []byte, system.WriteFileOptions) error {
 	return errors.ErrUnsupported
 }
+func (unsupportedFileSystem) WriteTempFile(context.Context, string, string, []byte, system.WriteTempFileOptions) (string, error) {
+	return "", errors.ErrUnsupported
+}
 func (unsupportedFileSystem) MkdirAll(context.Context, string, system.MkdirOptions) error {
 	return errors.ErrUnsupported
 }

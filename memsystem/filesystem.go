@@ -148,6 +148,44 @@ func (f *FileSystem) WriteFile(ctx context.Context, name string, data []byte, op
 	return nil
 }
 
+func (f *FileSystem) WriteTempFile(ctx context.Context, dir, pattern string, data []byte, opts system.WriteTempFileOptions) (string, error) {
+	if err := contextErr(ctx); err != nil {
+		return "", err
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	relDir, err := clean(dir)
+	if err != nil {
+		return "", err
+	}
+	if existing, ok := f.nodes[relDir]; ok && !existing.dir {
+		return "", fmt.Errorf("path is not a directory")
+	}
+	pattern = strings.TrimSpace(pattern)
+	if pattern == "" {
+		pattern = "tmp-*"
+	}
+	if strings.Contains(pattern, "/") {
+		return "", fmt.Errorf("temp file pattern must not contain a path separator")
+	}
+	mode := opts.Perm
+	if mode == 0 {
+		mode = 0o644
+	}
+	for i := 1; i <= 1_000_000; i++ {
+		rel := join(relDir, tempFileName(pattern, i))
+		if _, ok := f.nodes[rel]; ok {
+			continue
+		}
+		if err := f.ensureParents(rel); err != nil {
+			return "", err
+		}
+		f.nodes[rel] = &node{data: append([]byte(nil), data...), mode: mode, modTime: f.tick()}
+		return rel, nil
+	}
+	return "", fmt.Errorf("could not allocate temp file")
+}
+
 func (f *FileSystem) MkdirAll(ctx context.Context, name string, opts system.MkdirOptions) error {
 	if err := contextErr(ctx); err != nil {
 		return err
@@ -270,6 +308,21 @@ func baseName(rel string) string {
 		return "."
 	}
 	return path.Base(rel)
+}
+
+func join(dir, name string) string {
+	if dir == "" {
+		return name
+	}
+	return path.Join(dir, name)
+}
+
+func tempFileName(pattern string, sequence int) string {
+	token := fmt.Sprintf("%06d", sequence)
+	if strings.Contains(pattern, "*") {
+		return strings.Replace(pattern, "*", token, 1)
+	}
+	return pattern + token
 }
 
 func cloneNode(n *node) *node {

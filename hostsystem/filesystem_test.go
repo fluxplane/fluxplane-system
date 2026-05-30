@@ -54,6 +54,24 @@ func TestFileSystemRenameOverwrite(t *testing.T) {
 	}
 }
 
+func TestFileSystemWriteTempFile(t *testing.T) {
+	fsys := NewFileSystem(t.TempDir())
+	name, err := fsys.WriteTempFile(context.Background(), "artifacts/browser", "shot-*.png", []byte("png"), system.WriteTempFileOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(name, "artifacts/browser/shot-") || !strings.HasSuffix(name, ".png") {
+		t.Fatalf("temp name = %q", name)
+	}
+	data, err := fs.ReadFile(fsys, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "png" {
+		t.Fatalf("temp data = %q", data)
+	}
+}
+
 func TestFileSystemRejectsInvalidNames(t *testing.T) {
 	fsys := NewFileSystem(t.TempDir())
 	if _, err := fsys.Open("../escape"); err == nil {
@@ -90,5 +108,25 @@ func TestFileSystemRejectsSymlinkCreateEscape(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(outside, "out.txt")); !os.IsNotExist(err) {
 		t.Fatalf("outside file stat error = %v, want not exist", err)
+	}
+}
+
+func TestFileSystemRejectsSymlinkTempEscape(t *testing.T) {
+	root := t.TempDir()
+	outside := t.TempDir()
+	if err := os.Symlink(outside, filepath.Join(root, "link")); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	fsys := NewFileSystem(root)
+	_, err := fsys.WriteTempFile(context.Background(), "link", "out-*", []byte("x"), system.WriteTempFileOptions{})
+	if err == nil || !strings.Contains(err.Error(), "escapes") {
+		t.Fatalf("WriteTempFile error = %v, want escape rejection", err)
+	}
+	entries, err := os.ReadDir(outside)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("outside entries = %d, want 0", len(entries))
 	}
 }

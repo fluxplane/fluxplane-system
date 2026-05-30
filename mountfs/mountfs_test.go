@@ -67,6 +67,43 @@ func TestNamedRootReadOnly(t *testing.T) {
 	}
 }
 
+func TestWriteTempFileMapsVisibleName(t *testing.T) {
+	ctx := context.Background()
+	base := memsystem.NewFileSystem()
+	fsys, err := mountfs.New(base, mountfs.Spec{Roots: []mountfs.Root{
+		{Name: "", Path: "workspace", Access: mountfs.ReadWrite},
+		{Name: "scratch", Path: "scratch", Access: mountfs.ReadWrite},
+		{Name: "docs", Path: "docs", Access: mountfs.ReadOnly},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	primary, err := fsys.WriteTempFile(ctx, "artifacts", "shot-*.png", []byte("primary"), system.WriteTempFileOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if primary != "artifacts/shot-000001.png" {
+		t.Fatalf("primary temp name = %q", primary)
+	}
+	named, err := fsys.WriteTempFile(ctx, "@scratch/browser", "shot-*.png", []byte("named"), system.WriteTempFileOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if named != "@scratch/browser/shot-000001.png" {
+		t.Fatalf("named temp name = %q", named)
+	}
+	data, err := base.ReadFile("scratch/browser/shot-000001.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "named" {
+		t.Fatalf("temp data = %q", data)
+	}
+	if _, err := fsys.WriteTempFile(ctx, "@docs/browser", "shot-*", []byte("no"), system.WriteTempFileOptions{}); err == nil || !strings.Contains(err.Error(), "read-only") {
+		t.Fatalf("expected read-only error, got %v", err)
+	}
+}
+
 func TestRenameRequiresBothRootsWritable(t *testing.T) {
 	ctx := context.Background()
 	base := memsystem.NewFileSystem()

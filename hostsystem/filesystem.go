@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path"
@@ -105,6 +106,71 @@ func (f *FileSystem) WriteFile(ctx context.Context, name string, data []byte, op
 		return writeErr
 	}
 	return closeErr
+}
+
+func (f *FileSystem) WriteTempFile(ctx context.Context, dir, pattern string, data []byte, opts system.WriteTempFileOptions) (string, error) {
+	if err := contextErr(ctx); err != nil {
+		return "", err
+	}
+	dirPath, err := f.resolveCreate(dir)
+	if err != nil {
+		return "", err
+	}
+	if err := os.MkdirAll(dirPath, 0o755); err != nil {
+		return "", err
+	}
+	pattern = strings.TrimSpace(pattern)
+	if pattern == "" {
+		pattern = "tmp-*"
+	}
+	file, err := os.CreateTemp(dirPath, pattern)
+	if err != nil {
+		return "", err
+	}
+	created := file.Name()
+	written, writeErr := file.Write(data)
+	closeErr := file.Close()
+	if writeErr != nil {
+		_ = os.Remove(created)
+		return "", writeErr
+	}
+	if closeErr != nil {
+		_ = os.Remove(created)
+		return "", closeErr
+	}
+	if written != len(data) {
+		_ = os.Remove(created)
+		return "", io.ErrShortWrite
+	}
+	if opts.Perm != 0 {
+		if err := os.Chmod(created, opts.Perm); err != nil {
+			_ = os.Remove(created)
+			return "", err
+		}
+	}
+	real, err := filepath.EvalSymlinks(created)
+	if err != nil {
+		_ = os.Remove(created)
+		return "", err
+	}
+	if err := f.pathWithin(real); err != nil {
+		_ = os.Remove(created)
+		return "", err
+	}
+	root := f.root
+	if realRoot, err := filepath.EvalSymlinks(root); err == nil {
+		root = realRoot
+	}
+	rel, err := filepath.Rel(root, real)
+	if err != nil {
+		_ = os.Remove(created)
+		return "", err
+	}
+	if rel == "." || rel == "" || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) || filepath.IsAbs(rel) {
+		_ = os.Remove(created)
+		return "", fmt.Errorf("path escapes filesystem root")
+	}
+	return filepath.ToSlash(rel), nil
 }
 
 func (f *FileSystem) MkdirAll(ctx context.Context, name string, opts system.MkdirOptions) error {

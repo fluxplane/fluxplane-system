@@ -22,6 +22,7 @@ type FileSystem interface {
 	fs.ReadDirFS
 	fs.ReadFileFS
 	Writer
+	TempFileWriter
 	DirMaker
 	Remover
 	Renamer
@@ -30,6 +31,11 @@ type FileSystem interface {
 // Writer writes complete files.
 type Writer interface {
 	WriteFile(context.Context, string, []byte, WriteFileOptions) error
+}
+
+// TempFileWriter writes complete files to unique names in a directory.
+type TempFileWriter interface {
+	WriteTempFile(context.Context, string, string, []byte, WriteTempFileOptions) (string, error)
 }
 
 // DirMaker creates directories and parents.
@@ -51,6 +57,11 @@ type Renamer interface {
 type WriteFileOptions struct {
 	Perm      fs.FileMode
 	Overwrite bool
+}
+
+// WriteTempFileOptions controls temporary file writes.
+type WriteTempFileOptions struct {
+	Perm fs.FileMode
 }
 
 // MkdirOptions controls directory creation.
