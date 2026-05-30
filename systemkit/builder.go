@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/fs"
 	"net"
-	"time"
 
 	"github.com/fluxplane/fluxplane-system"
 	"github.com/fluxplane/fluxplane-system/hostsystem"
@@ -196,22 +195,56 @@ func (unsupportedProcess) Start(context.Context, system.ProcessRequest) (system.
 func (unsupportedProcess) Ensure(context.Context, system.ProcessRequest) (system.ProcessHandle, bool, error) {
 	return nil, false, errors.ErrUnsupported
 }
+func (unsupportedProcess) Group(string) system.ProcessGroup {
+	return unsupportedProcessGroup{}
+}
 func (unsupportedProcess) List(context.Context) ([]system.ProcessInfo, error) {
 	return nil, errors.ErrUnsupported
 }
-func (unsupportedProcess) Status(context.Context, string) (system.ProcessInfo, error) {
-	return system.ProcessInfo{}, errors.ErrUnsupported
+
+type unsupportedProcessGroup struct{}
+
+func (unsupportedProcessGroup) Name() string { return "" }
+func (unsupportedProcessGroup) List(context.Context) ([]system.ProcessInfo, error) {
+	return nil, errors.ErrUnsupported
 }
-func (unsupportedProcess) Output(context.Context, string) (system.ProcessOutput, error) {
-	return system.ProcessOutput{}, errors.ErrUnsupported
+func (unsupportedProcessGroup) Subscribe(context.Context) <-chan system.ProcessEvent {
+	return nil
 }
-func (unsupportedProcess) Wait(context.Context, string, time.Duration) (system.ProcessResult, error) {
+func (unsupportedProcessGroup) Wait(context.Context) (system.ProcessResult, error) {
 	return system.ProcessResult{}, errors.ErrUnsupported
 }
-func (unsupportedProcess) Stop(context.Context, string) error {
+func (unsupportedProcessGroup) Stop(context.Context) error {
 	return errors.ErrUnsupported
 }
-func (unsupportedProcess) Kill(context.Context, string) error {
+func (unsupportedProcessGroup) Kill(context.Context) error {
+	return errors.ErrUnsupported
+}
+func (unsupportedProcessGroup) Signal(context.Context, system.ProcessSignal) error {
+	return errors.ErrUnsupported
+}
+func (unsupportedProcessGroup) Interrupt(context.Context) error {
+	return errors.ErrUnsupported
+}
+func (unsupportedProcessGroup) Reload(context.Context) error {
+	return errors.ErrUnsupported
+}
+func (unsupportedProcessGroup) Pause(context.Context) error {
+	return errors.ErrUnsupported
+}
+func (unsupportedProcessGroup) Resume(context.Context) error {
+	return errors.ErrUnsupported
+}
+func (unsupportedProcessGroup) Write(context.Context, []byte) (int, error) {
+	return 0, errors.ErrUnsupported
+}
+func (unsupportedProcessGroup) CloseInput(context.Context) error {
+	return errors.ErrUnsupported
+}
+func (unsupportedProcessGroup) Restart(context.Context) (system.ProcessHandle, error) {
+	return nil, errors.ErrUnsupported
+}
+func (unsupportedProcessGroup) Detach(context.Context) error {
 	return errors.ErrUnsupported
 }
 
