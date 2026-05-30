@@ -239,11 +239,8 @@ func (f *FileSystem) resolveExisting(name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	real, err := filepath.EvalSymlinks(candidate)
+	real, err := system.ResolveExistingUnderRoot(f.root, candidate)
 	if err != nil {
-		return "", err
-	}
-	if err := f.pathWithin(real); err != nil {
 		return "", err
 	}
 	return real, nil
@@ -254,59 +251,15 @@ func (f *FileSystem) resolveCreate(name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if _, err := os.Lstat(candidate); err == nil {
-		real, err := filepath.EvalSymlinks(candidate)
-		if err != nil {
-			return "", err
-		}
-		if err := f.pathWithin(real); err != nil {
-			return "", err
-		}
-		return real, nil
-	} else if !errors.Is(err, os.ErrNotExist) {
+	real, err := system.ResolveCreateUnderRoot(f.root, candidate)
+	if err != nil {
 		return "", err
 	}
-
-	missing := []string{filepath.Base(candidate)}
-	parent := filepath.Dir(candidate)
-	for {
-		if _, err := os.Lstat(parent); err == nil {
-			realParent, err := filepath.EvalSymlinks(parent)
-			if err != nil {
-				return "", err
-			}
-			for i := len(missing) - 1; i >= 0; i-- {
-				realParent = filepath.Join(realParent, missing[i])
-			}
-			if err := f.pathWithin(realParent); err != nil {
-				return "", err
-			}
-			return realParent, nil
-		} else if !errors.Is(err, os.ErrNotExist) {
-			return "", err
-		}
-		next := filepath.Dir(parent)
-		if next == parent {
-			return "", fmt.Errorf("path escapes filesystem root")
-		}
-		missing = append(missing, filepath.Base(parent))
-		parent = next
-	}
+	return real, nil
 }
 
 func (f *FileSystem) pathWithin(candidate string) error {
-	root := f.root
-	if realRoot, err := filepath.EvalSymlinks(root); err == nil {
-		root = realRoot
-	}
-	rel, err := filepath.Rel(root, candidate)
-	if err != nil {
-		return err
-	}
-	if rel == "." || rel == "" {
-		return nil
-	}
-	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) || filepath.IsAbs(rel) {
+	if err := system.PathWithin(f.root, candidate); err != nil {
 		return fmt.Errorf("path escapes filesystem root")
 	}
 	return nil
