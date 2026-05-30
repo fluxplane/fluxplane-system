@@ -34,6 +34,16 @@ type BoundedFileWriter interface {
 	WriteFile(context.Context, string, []byte, fs.FileMode, bool) (ResolvedPath, error)
 }
 
+// BoundedFileCopier copies one file while returning source and destination paths.
+type BoundedFileCopier interface {
+	CopyFile(context.Context, string, string, bool) (ResolvedPath, ResolvedPath, int64, error)
+}
+
+// BoundedFileMover moves one file while returning source and destination paths.
+type BoundedFileMover interface {
+	MoveFile(context.Context, string, string, bool) (ResolvedPath, ResolvedPath, int64, error)
+}
+
 // BoundedDirMaker creates directories while returning their resolved bounded path.
 type BoundedDirMaker interface {
 	MkdirAll(context.Context, string, fs.FileMode) (ResolvedPath, error)
