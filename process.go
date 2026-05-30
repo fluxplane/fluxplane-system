@@ -87,16 +87,18 @@ type ProcessHandle interface {
 
 // ProcessRequest describes one bounded process execution.
 type ProcessRequest struct {
-	Command  string
-	Args     []string
-	Workdir  string
-	Env      []string
-	Timeout  time.Duration
-	Detached bool
-	Label    string
-	Group    string
-	Tags     []string
-	Metadata map[string]string
+	Command   string
+	Args      []string
+	Workdir   string
+	Env       []string
+	Timeout   time.Duration
+	MaxStdout int64
+	MaxStderr int64
+	Detached  bool
+	Label     string
+	Group     string
+	Tags      []string
+	Metadata  map[string]string
 }
 
 // ProcessInfo describes a managed process.
@@ -141,10 +143,14 @@ func (e ProcessEvent) EventName() event.Name {
 
 // ProcessResult is the captured process outcome.
 type ProcessResult struct {
-	Command  string        `json:"command"`
-	Args     []string      `json:"args,omitempty"`
-	Workdir  string        `json:"workdir,omitempty"`
-	ExitCode int           `json:"exit_code"`
-	TimedOut bool          `json:"timed_out,omitempty"`
-	Duration time.Duration `json:"-"`
+	Command         string        `json:"command"`
+	Args            []string      `json:"args,omitempty"`
+	Workdir         string        `json:"workdir,omitempty"`
+	ExitCode        int           `json:"exit_code"`
+	TimedOut        bool          `json:"timed_out,omitempty"`
+	Duration        time.Duration `json:"-"`
+	Stdout          string        `json:"stdout,omitempty"`
+	Stderr          string        `json:"stderr,omitempty"`
+	StdoutTruncated bool          `json:"stdout_truncated,omitempty"`
+	StderrTruncated bool          `json:"stderr_truncated,omitempty"`
 }
